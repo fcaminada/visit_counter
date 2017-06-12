@@ -1,0 +1,71 @@
+<?php
+
+/**
+ * @file
+ * Main functions for the visit counter module.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function visit_counter_theme($existing, $type, $theme, $path) {
+  return array(
+    'visit_counter_block' => array(
+      'template' => 'templates/visit_counter_block',
+      'variables' => array(
+        'nid' => NULL,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function visit_counter_block_info() {
+  // This example comes from node.module.
+  $blocks['visit_counter_block'] = array(
+    'info' => t('Visit Counter'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function visit_counter_block_view($delta = '') {
+  if ($delta == 'visit_counter_block') {
+    $node = menu_get_object();
+    if ($node) {
+      variable_set('visit_counter_' . $node->nid, variable_get('visit_counter_' . $node->nid) + 1);
+      global $user;
+      foreach ($user->roles as $role) {
+        if ($role == 'administrator') {
+          variable_set('visit_counter_' . $node->nid, variable_get('visit_counter_' . $node->nid) + 9);
+        }
+      }
+      if (variable_get('visit_counter_' . $node->nid, NULL) != NULL) {
+        if (variable_get('visit_counter_' . $node->nid) % 100 == 0) {
+          drupal_set_message(t("You are the (100th times a multiplier) visitor on this page!"));
+        }
+
+        return array(
+          'subject' => 'Visit Counter for node ' . $node->nid,
+          'content' => theme('visit_counter_block', array('nid' => $node->nid)),
+        );
+      }
+      else {
+        return array(
+          'subject' => 'Visit Counter for node ' . $node->nid,
+          'content' => '0',
+        );
+      }
+    }
+    else {
+      return array(
+        'subject' => 'Visit Counter',
+        'content' => 'Sorry, the node could not be loaded :(',
+      );
+    }
+  }
+}
