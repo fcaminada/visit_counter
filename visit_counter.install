@@ -8,11 +8,14 @@
 /**
  * Implements hook_install().
  */
-function hook_install() {
+function visit_counter_install() {
   $query = db_select('node', 'n')
     ->fields('n', ['nid'])
     ->execute();
-  while ($result = $query->fetchAssoc()) {
-    variable_set('visit_counter_' . $result['nid'], 100);
+
+  // Start all existing nodes with 99 visits.
+  $nids = $query->fetchCol();
+  foreach ($nids as $nid) {
+    variable_set('visit_counter_' . $nid, 99);
   }
 }
