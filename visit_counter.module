@@ -31,41 +31,57 @@ function visit_counter_block_info() {
 }
 
 /**
+ * Implements hook_node_view().
+ */
+function visit_counter_node_view($node, $view_mode, $langcode) {
+  global $user;
+  $variable_name = 'visit_counter_' . $node->nid;
+  $current_counter = variable_get($variable_name, 0);
+
+  // Calculates the counter increment based on the user role.
+  $increment = 1;
+  if (in_array('administrator', $user->roles)) {
+    $increment = 10;
+  }
+
+  $next_counter = $current_counter + $increment;
+  variable_set($variable_name, $next_counter);
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ */
+function visit_counter_preprocess_visit_counter_block(&$variables) {
+  $counter = 0;
+  if (isset($variables['nid'])) {
+    $counter = variable_get('visit_counter_' . $variables['nid'], 0);
+  }
+
+  if (0 == $counter % 100) {
+    drupal_set_message(t("Pretty message for the user."), 'status', FALSE);
+  }
+
+  $variables['counter'] = $counter;
+}
+
+/**
  * Implements hook_block_view().
  */
 function visit_counter_block_view($delta = '') {
-  if ($delta == 'visit_counter_block') {
-    $node = menu_get_object();
-    if ($node) {
-      variable_set('visit_counter_' . $node->nid, variable_get('visit_counter_' . $node->nid) + 1);
-      global $user;
-      foreach ($user->roles as $role) {
-        if ($role == 'administrator') {
-          variable_set('visit_counter_' . $node->nid, variable_get('visit_counter_' . $node->nid) + 9);
-        }
-      }
-      if (variable_get('visit_counter_' . $node->nid, NULL) != NULL) {
-        if (variable_get('visit_counter_' . $node->nid) % 100 == 0) {
-          drupal_set_message(t("You are the (100th times a multiplier) visitor on this page!"));
-        }
-
-        return array(
-          'subject' => 'Visit Counter for node ' . $node->nid,
-          'content' => theme('visit_counter_block', array('nid' => $node->nid)),
-        );
-      }
-      else {
-        return array(
-          'subject' => 'Visit Counter for node ' . $node->nid,
-          'content' => '0',
-        );
-      }
-    }
-    else {
-      return array(
-        'subject' => 'Visit Counter',
-        'content' => 'Sorry, the node could not be loaded :(',
-      );
-    }
+  if ($delta != 'visit_counter_block') {
+    return array();
   }
+
+  $menu_object = menu_get_object();
+
+  // Do not load the Visit Counter block on objects that are not node.
+  if (!isset($menu_object) || !isset($menu_object->nid)) {
+    return array();
+  }
+
+  // Returns the block content from the visit_counter template.
+  return array(
+    'subject' => 'Visit Counter for node ' . $menu_object->nid,
+    'content' => theme('visit_counter_block', array('nid' => $menu_object->nid)),
+  );
 }
